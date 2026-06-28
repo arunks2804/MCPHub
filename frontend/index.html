@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCPHub — Build & Discover MCP Servers</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f1117;
+    --panel: #1e2130;
+    --panel2: #252840;
+    --border: #2e3150;
+    --accent: #4f9cf9;
+    --accent2: #7c3aed;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --success: #22c55e;
+    --error: #ef4444;
+    --warn: #f59e0b;
+    --radius: 10px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  a { color: var(--accent); text-decoration: none; }
+
+  /* Header */
+  .header { border-bottom: 1px solid var(--border); padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .header-left h1 { font-size: 1.6rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header-left p { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
+  .badges { display: flex; gap: 8px; margin-top: 8px; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; border: 1px solid; }
+  .badge-blue { border-color: var(--accent); color: var(--accent); }
+  .badge-purple { border-color: #a78bfa; color: #a78bfa; }
+  .badge-green { border-color: var(--success); color: var(--success); }
+
+  /* Layout */
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 32px; }
+
+  /* Provider Panel */
+  .provider-panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 24px; overflow: hidden; }
+  .provider-header { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .provider-header h3 { font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+  .provider-body { padding: 20px; border-top: 1px solid var(--border); display: none; }
+  .provider-body.open { display: block; }
+  .provider-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .provider-btn { padding: 8px 18px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+  .provider-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .provider-btn.active { border-color: var(--accent); background: rgba(79,156,249,0.15); color: var(--accent); font-weight: 600; }
+  .provider-config { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .provider-config .field { flex: 1; min-width: 180px; }
+  .field label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+  .field input, .field select { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.9rem; }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+  .key-wrap { position: relative; }
+  .key-wrap input { padding-right: 36px; }
+  .key-wrap button { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; }
+  .provider-status { margin-top: 12px; font-size: 0.8rem; color: var(--muted); }
+  .provider-status.ok { color: var(--success); }
+  .provider-status.fail { color: var(--error); }
+  .btn-test { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; font-size: 0.85rem; }
+  .btn-test:hover { background: rgba(79,156,249,0.1); }
+  .key-note { font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+  .tab-btn { padding: 10px 24px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.95rem; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Build form */
+  .build-form { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 0.85rem; color: var(--muted); }
+  .form-group input, .form-group select, .form-group textarea { padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.9rem; font-family: inherit; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
+  .form-group textarea { resize: vertical; min-height: 90px; }
+  .form-group .hint { font-size: 0.75rem; color: var(--muted); }
+  .span2 { grid-column: span 2; }
+  .btn-primary { padding: 12px 28px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Steps */
+  .steps { margin: 20px 0; display: flex; flex-direction: column; gap: 8px; }
+  .step { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--muted); }
+  .step.active { color: var(--text); }
+  .step.done { color: var(--success); }
+  .step-icon { width: 20px; text-align: center; }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* Result panels */
+  .result-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .result-panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .result-panel h3 { font-size: 0.95rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .result-summary p { color: var(--muted); font-size: 0.85rem; margin: 4px 0; }
+  .result-summary .server-name { font-size: 1.1rem; font-weight: 700; color: var(--text); margin: 8px 0; }
+  .tool-count { display: inline-flex; align-items: center; gap: 6px; background: rgba(79,156,249,0.15); color: var(--accent); border-radius: 6px; padding: 4px 10px; font-size: 0.85rem; font-weight: 600; }
+  .btn-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .btn-sec { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+  .btn-sec:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-accent { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: rgba(79,156,249,0.1); color: var(--accent); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+
+  /* File viewer */
+  .file-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
+  .file-tab { padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; font-size: 0.78rem; font-family: monospace; }
+  .file-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(79,156,249,0.1); }
+  .code-wrap { position: relative; border-radius: 8px; overflow: hidden; }
+  .code-wrap pre { max-height: 300px; overflow-y: auto; font-size: 0.8rem; }
+  .copy-btn { position: absolute; top: 8px; right: 8px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); cursor: pointer; font-size: 0.75rem; }
+  .copy-btn:hover { color: var(--text); }
+
+  /* Test cards */
+  .test-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+  .test-card h4 { font-size: 0.9rem; font-family: monospace; margin-bottom: 10px; color: var(--accent); }
+  .test-card .param-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .test-card .param-row label { font-size: 0.78rem; color: var(--muted); min-width: 80px; }
+  .test-card .param-row input { flex: 1; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 0.85rem; }
+  .test-result { margin-top: 10px; padding: 10px; border-radius: 6px; font-size: 0.82rem; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
+  .test-result.ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: var(--success); }
+  .test-result.fail { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--error); }
+  .test-all-btn { margin-top: 12px; }
+  .test-all-result { margin-top: 12px; }
+  .test-all-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .test-all-row:last-child { border-bottom: none; }
+  .tool-status { font-weight: 600; }
+  .ok-text { color: var(--success); }
+  .fail-text { color: var(--error); }
+
+  /* Registry */
+  .registry-search { display: flex; gap: 12px; margin-bottom: 16px; }
+  .registry-search input { flex: 1; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); color: var(--text); font-size: 1rem; }
+  .registry-search input:focus { outline: none; border-color: var(--accent); }
+  .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); cursor: pointer; font-size: 0.82rem; transition: all 0.15s; }
+  .pill.active { border-color: var(--accent); color: var(--accent); background: rgba(79,156,249,0.1); }
+  .stats-bar { display: flex; gap: 24px; margin-bottom: 20px; font-size: 0.85rem; color: var(--muted); }
+  .stats-bar span strong { color: var(--text); }
+  .server-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .server-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s; }
+  .server-card:hover { border-color: var(--accent); }
+  .card-header { display: flex; align-items: flex-start; justify-content: space-between; }
+  .card-title { font-size: 1rem; font-weight: 700; }
+  .card-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cat-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+  .src-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; }
+  .src-built { background: rgba(79,156,249,0.1); color: var(--accent); border: 1px solid rgba(79,156,249,0.3); }
+  .src-registered { background: rgba(34,197,94,0.1); color: var(--success); border: 1px solid rgba(34,197,94,0.3); }
+  .card-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+  .card-tools { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tool-chip { padding: 3px 8px; border-radius: 4px; background: var(--panel2); color: var(--muted); font-size: 0.75rem; font-family: monospace; border: 1px solid var(--border); }
+  .card-api { font-size: 0.75rem; color: var(--muted); font-family: monospace; }
+  .card-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .card-btn { flex: 1; padding: 7px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel2); color: var(--muted); cursor: pointer; font-size: 0.8rem; text-align: center; transition: all 0.15s; }
+  .card-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .register-panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; display: none; }
+  .register-panel.open { display: block; }
+  .tool-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .tool-entry { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--bg); border-radius: 6px; font-size: 0.82rem; }
+  .tool-entry .rm { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; }
+  .tool-entry .rm:hover { color: var(--error); }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; display: none; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); width: 90%; max-width: 900px; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .modal-header h3 { font-size: 1rem; }
+  .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.2rem; }
+  .modal-body { padding: 20px; overflow-y: auto; }
+  .modal-code pre { max-height: 60vh; overflow-y: auto; font-size: 0.8rem; }
+
+  /* Misc */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-header h2 { font-size: 1.1rem; }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state p { margin-top: 8px; font-size: 0.9rem; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <h1>MCPHub</h1>
+    <p>Build MCP servers from any API using AI. Discover servers built by others.</p>
+    <div class="badges">
+      <span class="badge badge-green">Open Source</span>
+      <span class="badge badge-blue">Self Hosted</span>
+      <span class="badge badge-purple">MIT License</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Provider Panel -->
+  <div class="provider-panel">
+    <div class="provider-header" onclick="toggleProvider()">
+      <h3><span id="providerHeaderIcon">⚙️</span> LLM Provider — <span id="providerHeaderLabel" style="color:var(--accent)">Not configured</span></h3>
+      <span id="providerChevron">▼</span>
+    </div>
+    <div class="provider-body" id="providerBody">
+      <div class="provider-buttons">
+        <button class="provider-btn" onclick="selectProvider('ollama')">Ollama</button>
+        <button class="provider-btn" onclick="selectProvider('claude')">Claude</button>
+        <button class="provider-btn" onclick="selectProvider('openai')">OpenAI</button>
+        <button class="provider-btn" onclick="selectProvider('gemini')">Gemini</button>
+        <button class="provider-btn" onclick="selectProvider('mistral')">Mistral</button>
+        <button class="provider-btn" onclick="selectProvider('groq')">Groq</button>
+      </div>
+      <div id="providerConfig"></div>
+      <div style="margin-top:12px; display:flex; align-items:center; gap:12px;">
+        <button class="btn-test" onclick="testConnection()">Test Connection</button>
+        <span id="providerStatus" class="provider-status"></span>
+      </div>
+      <p class="key-note">API keys stored in browser only — never sent to MCPHub servers</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('build')">🔨 Build</button>
+    <button class="tab-btn" onclick="switchTab('registry')">🗂 Registry</button>
+  </div>
+
+  <!-- BUILD TAB -->
+  <div id="tab-build" class="tab-content active">
+    <div class="build-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>MCP Server Name *</label>
+          <input id="buildName" placeholder="e.g. Confluence Comments MCP">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="buildCategory">
+            <option>Productivity</option><option>Communication</option><option>Data</option>
+            <option>Code</option><option>HR</option><option>Finance</option><option>CRM</option><option>Custom</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>API Base URL *</label>
+          <input id="buildApiUrl" placeholder="https://api.atlassian.com">
+        </div>
+        <div class="form-group">
+          <label>API Key Environment Variable Name *</label>
+          <input id="buildEnvVar" placeholder="e.g. CONFLUENCE_API_KEY">
+          <span class="hint">ℹ Your generated code reads the key from this env var. MCPHub never stores your key.</span>
+        </div>
+        <div class="form-group span2">
+          <label>Describe the tools you need (plain English) *</label>
+          <textarea id="buildTools" placeholder="e.g. I need tools to get a Confluence page by ID, update a comment on a page, and search pages by keyword"></textarea>
+        </div>
+        <div class="form-group span2">
+          <label>Brief description of this server</label>
+          <input id="buildDesc" placeholder="e.g. Connect AI agents to Confluence comment management">
+        </div>
+      </div>
+      <div style="margin-top:20px;">
+        <button class="btn-primary" id="generateBtn" onclick="generateServer()">Generate MCP Server</button>
+      </div>
+    </div>
+
+    <div id="buildSteps" class="steps" style="display:none"></div>
+    <div id="buildResult" style="display:none"></div>
+  </div>
+
+  <!-- REGISTRY TAB -->
+  <div id="tab-registry" class="tab-content">
+    <div class="section-header">
+      <h2>MCP Server Registry</h2>
+      <button class="btn-sec" onclick="toggleRegisterPanel()">+ Register Existing MCP</button>
+    </div>
+
+    <div class="register-panel" id="registerPanel">
+      <h3 style="margin-bottom:16px; font-size:0.95rem;">Register Existing MCP Server</h3>
+      <div class="form-grid">
+        <div class="form-group"><label>Name *</label><input id="regName" placeholder="My MCP Server"></div>
+        <div class="form-group"><label>Category</label>
+          <select id="regCategory">
+            <option>Productivity</option><option>Communication</option><option>Data</option>
+            <option>Code</option><option>HR</option><option>Finance</option><option>CRM</option><option>Custom</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Description *</label><input id="regDesc" placeholder="What this MCP server does"></div>
+        <div class="form-group"><label>API Base URL</label><input id="regApiUrl" placeholder="https://api.example.com"></div>
+        <div class="form-group"><label>API Key Env Var</label><input id="regEnvVar" placeholder="MY_API_KEY"></div>
+        <div class="form-group">
+          <label>Add Tool</label>
+          <div style="display:flex;gap:8px;">
+            <input id="regToolName" placeholder="tool_name" style="flex:1;">
+            <input id="regToolDesc" placeholder="What this tool does" style="flex:2;">
+            <button class="btn-sec" onclick="addRegTool()">+</button>
+          </div>
+          <div class="tool-list" id="regToolList"></div>
+        </div>
+      </div>
+      <div style="margin-top:16px; display:flex; gap:8px;">
+        <button class="btn-primary" onclick="registerServer()">Register MCP</button>
+        <button class="btn-sec" onclick="toggleRegisterPanel()">Cancel</button>
+      </div>
+    </div>
+
+    <div class="registry-search">
+      <input id="searchInput" placeholder="🔍 Search by what you need... e.g. 'update a confluence comment'" oninput="debounceSearch()">
+    </div>
+
+    <div class="filter-pills" id="filterPills">
+      <span class="pill active" onclick="setFilter('all')">All</span>
+    </div>
+
+    <div class="stats-bar" id="statsBar"></div>
+    <div class="server-grid" id="serverGrid"></div>
+  </div>
+
+</div>
+
+<!-- Code Modal -->
+<div class="modal-overlay" id="codeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Server Code</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="file-tabs" id="modalFileTabs"></div>
+      <div class="code-wrap modal-code">
+        <button class="copy-btn" onclick="copyModalCode()">Copy</button>
+        <pre><code id="modalCode" class="language-python"></code></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Test Modal -->
+<div class="modal-overlay" id="testModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="testModalTitle">Test Tools</h3>
+      <button class="modal-close" onclick="closeTestModal()">✕</button>
+    </div>
+    <div class="modal-body" id="testModalBody"></div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8002';
+let currentProvider = localStorage.getItem('mcphub_provider') || 'ollama';
+let currentModel = localStorage.getItem('mcphub_model') || '';
+let currentApiKey = localStorage.getItem('mcphub_api_key') || '';
+let activeFilter = 'all';
+let searchTimer = null;
+let allServers = [];
+let regTools = [];
+let currentServerFiles = {};
+let currentServerId = null;
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+function toggleProvider() {
+  const body = document.getElementById('providerBody');
+  const chevron = document.getElementById('providerChevron');
+  body.classList.toggle('open');
+  chevron.textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+
+function selectProvider(p) {
+  currentProvider = p;
+  document.querySelectorAll('.provider-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === p));
+  renderProviderConfig();
+}
+
+function renderProviderConfig() {
+  const isOllama = currentProvider === 'ollama';
+  let html = '<div class="provider-config">';
+  if (!isOllama) {
+    html += `<div class="field"><label>Model</label><input id="modelInput" placeholder="e.g. gpt-4o" value="${currentModel}" oninput="currentModel=this.value;save()"></div>`;
+    html += `<div class="field"><label>API Key</label><div class="key-wrap"><input type="password" id="apiKeyInput" placeholder="sk-..." value="${currentApiKey}" oninput="currentApiKey=this.value;save()"><button onclick="toggleKey()">👁</button></div></div>`;
+  } else {
+    html += `<div class="field"><label>Model</label><input id="ollamaModelInput" placeholder="e.g. mistral, llama3.2, gemma3..." value="${currentModel}" oninput="currentModel=this.value;save()"></div>`;
+  }
+  html += '</div>';
+  document.getElementById('providerConfig').innerHTML = html;
+  updateProviderHeader();
+  if (isOllama) loadOllamaModels();
+}
+
+function updateProviderHeader() {
+  document.getElementById('providerHeaderLabel').textContent = currentProvider.charAt(0).toUpperCase() + currentProvider.slice(1);
+}
+
+function toggleKey() {
+  const inp = document.getElementById('apiKeyInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function save() {
+  localStorage.setItem('mcphub_provider', currentProvider);
+  localStorage.setItem('mcphub_model', currentModel);
+  localStorage.setItem('mcphub_api_key', currentApiKey);
+}
+
+async function loadOllamaModels() {
+  try {
+    const r = await fetch(API + '/health');
+    const d = await r.json();
+    const sel = document.getElementById('ollamaModelSelect');
+    if (sel && d.ollama.models.length) {
+      sel.innerHTML = d.ollama.models.map(m => `<option value="${m}">${m}</option>`).join('');
+      if (currentModel) sel.value = currentModel;
+      else { currentModel = sel.value; save(); }
+    }
+  } catch(e) {}
+}
+
+async function testConnection() {
+  const st = document.getElementById('providerStatus');
+  st.textContent = 'Testing...'; st.className = 'provider-status';
+  try {
+    const r = await fetch(API + '/health');
+    const d = await r.json();
+    if (currentProvider === 'ollama') {
+      if (d.ollama.available) { st.textContent = `✓ Ollama connected (${d.ollama.models.length} models)`; st.className = 'provider-status ok'; }
+      else { st.textContent = '✗ Ollama not running'; st.className = 'provider-status fail'; }
+    } else {
+      st.textContent = `✓ Backend reachable — ${currentProvider} will be used`; st.className = 'provider-status ok';
+    }
+  } catch(e) { st.textContent = '✗ Cannot reach MCPHub backend'; st.className = 'provider-status fail'; }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', ['build','registry'][i] === name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-'+name));
+  if (name === 'registry') loadRegistry();
+}
+
+// ── Build ─────────────────────────────────────────────────────────────────────
+async function generateServer() {
+  const name = document.getElementById('buildName').value.trim();
+  const apiUrl = document.getElementById('buildApiUrl').value.trim();
+  const envVar = document.getElementById('buildEnvVar').value.trim();
+  const toolsDesc = document.getElementById('buildTools').value.trim();
+  if (!name || !apiUrl || !envVar || !toolsDesc) { alert('Please fill in all required fields.'); return; }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+
+  const stepsEl = document.getElementById('buildSteps');
+  stepsEl.style.display = 'flex';
+  document.getElementById('buildResult').style.display = 'none';
+
+  const steps = ['Designing tools...', 'Generating server code...', 'Creating files...', 'Building zip...'];
+  function renderSteps(active, done) {
+    stepsEl.innerHTML = steps.map((s,i) => {
+      let cls = 'step', icon = '○';
+      if (i < done) { cls += ' done'; icon = '✓'; }
+      else if (i === active) { cls += ' active'; icon = '<span class="spin">⟳</span>'; }
+      return `<div class="${cls}"><span class="step-icon">${icon}</span>${s}</div>`;
+    }).join('');
+  }
+
+  renderSteps(0, 0);
+  try {
+    const body = {
+      name, api_base_url: apiUrl, api_key_env_name: envVar,
+      tools_description: toolsDesc,
+      description: document.getElementById('buildDesc').value.trim() || name,
+      category: document.getElementById('buildCategory').value,
+      provider: currentProvider, model: currentModel, api_key: currentApiKey
+    };
+
+    renderSteps(1, 1);
+    renderSteps(2, 2);
+    const r = await fetch(API + '/builder/generate', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    renderSteps(3, 3);
+    const data = await r.json();
+    renderSteps(-1, 4);
+
+    currentServerId = data.server_id;
+    currentServerFiles = data.files || {};
+    showBuildResult(data);
+  } catch(e) {
+    stepsEl.innerHTML = `<div class="step" style="color:var(--error)">✗ Error: ${e.message}</div>`;
+  }
+  btn.disabled = false;
+}
+
+function showBuildResult(data) {
+  const res = document.getElementById('buildResult');
+  res.style.display = 'block';
+
+  const tools = data.tools || [];
+  const files = data.files || {};
+  const fileNames = Object.keys(files);
+
+  res.innerHTML = `
+    <div class="result-panels">
+      <div class="result-panel">
+        <h3>✅ MCP Server Generated</h3>
+        <div class="result-summary">
+          <div class="server-name">${data.name}</div>
+          <p>Category: ${data.category}</p>
+          <p style="margin-top:8px"><span class="tool-count">🔧 ${tools.length} tools created</span></p>
+        </div>
+        <div class="btn-row">
+          <button class="btn-accent" onclick="downloadZip('${data.server_id}')">⬇ Download ZIP</button>
+          <button class="btn-sec" onclick="addBuiltToRegistry(${JSON.stringify(data).replace(/"/g,'&quot;')})">+ Add to Registry</button>
+        </div>
+      </div>
+
+      <div class="result-panel">
+        <h3>📄 View Code</h3>
+        <div class="file-tabs" id="buildFileTabs">
+          ${fileNames.map((f,i) => `<button class="file-tab ${i===0?'active':''}" onclick="showBuildFile('${f}')">${f}</button>`).join('')}
+        </div>
+        <div class="code-wrap">
+          <button class="copy-btn" onclick="copyBuildCode()">Copy</button>
+          <pre><code id="buildFileCode" class="language-python">${escHtml(files[fileNames[0]] || '')}</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-panel" style="margin-top:16px;">
+      <h3>🧪 Test Tools</h3>
+      <div id="buildTestCards">
+        ${tools.map(t => buildTestCard(t, data.server_id)).join('')}
+      </div>
+      <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
+        <div class="form-group" style="flex:1;">
+          <label>API Key for testing all tools:</label>
+          <div class="key-wrap"><input type="password" id="testAllKey" placeholder="Your API key — used once, never stored"><button onclick="toggleTestKey()">👁</button></div>
+        </div>
+        <button class="btn-sec test-all-btn" onclick="testAllTools('${data.server_id}')">Test All Tools</button>
+      </div>
+      <div id="testAllResult" class="test-all-result" style="display:none;"></div>
+    </div>
+  `;
+  hljs.highlightAll();
+}
+
+function buildTestCard(tool, serverId) {
+  const params = (tool.parameters || []).map(p =>
+    `<div class="param-row"><label>${p.name}${p.required?'*':''}</label><input id="param_${serverId}_${tool.name}_${p.name}" placeholder="${p.description||p.name}"></div>`
+  ).join('');
+  return `
+    <div class="test-card" id="card_${tool.name}">
+      <h4>🧪 ${tool.name}</h4>
+      ${params}
+      <div class="param-row">
+        <label>API Key</label>
+        <div class="key-wrap" style="flex:1;">
+          <input type="password" id="testkey_${tool.name}" placeholder="Your API key — used once, never stored">
+          <button onclick="document.getElementById('testkey_${tool.name}').type==='password'?document.getElementById('testkey_${tool.name}').type='text':document.getElementById('testkey_${tool.name}').type='password'">👁</button>
+        </div>
+      </div>
+      <p class="hint" style="margin-bottom:8px;">ℹ Used once only — never stored</p>
+      <button class="btn-sec" onclick="runToolTest('${serverId}','${tool.name}',${JSON.stringify(tool.parameters||[])})">Run Test</button>
+      <div id="testres_${tool.name}" style="display:none;"></div>
+    </div>`;
+}
+
+async function runToolTest(serverId, toolName, params) {
+  const parameters = {};
+  (params||[]).forEach(p => {
+    const val = document.getElementById(`param_${serverId}_${toolName}_${p.name}`)?.value;
+    if (val) parameters[p.name] = val;
+  });
+  const apiKey = document.getElementById(`testkey_${toolName}`)?.value || '';
+  const resEl = document.getElementById(`testres_${toolName}`);
+  resEl.style.display = 'block';
+  resEl.className = 'test-result';
+  resEl.textContent = 'Running...';
+  try {
+    const r = await fetch(API + '/builder/test-tool', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({server_id:serverId, tool_name:toolName, parameters, api_key:apiKey})});
+    const d = await r.json();
+    resEl.className = `test-result ${d.success?'ok':'fail'}`;
+    resEl.textContent = d.success
+      ? `✅ ${d.status_code} OK — ${d.latency_ms}ms\n${JSON.stringify(d.response, null, 2)}`
+      : `❌ ${d.error||'Failed'}\n${JSON.stringify(d.response, null, 2)}`;
+  } catch(e) { resEl.className = 'test-result fail'; resEl.textContent = `❌ ${e.message}`; }
+}
+
+function toggleTestKey() {
+  const inp = document.getElementById('testAllKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+async function testAllTools(serverId) {
+  const apiKey = document.getElementById('testAllKey').value;
+  const resEl = document.getElementById('testAllResult');
+  resEl.style.display = 'block';
+  resEl.innerHTML = 'Running all tests...';
+  try {
+    const r = await fetch(API + '/builder/test-all', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({server_id:serverId, api_key:apiKey, sample_params:{}})});
+    const d = await r.json();
+    resEl.innerHTML = `<strong>Results: ${d.passed}/${d.total} passed</strong>` +
+      d.results.map(r => `<div class="test-all-row"><span class="tool-status ${r.success?'ok-text':'fail-text'}">${r.success?'✅':'❌'}</span><span style="font-family:monospace">${r.tool}</span><span style="color:var(--muted);font-size:0.8rem;">${r.success?r.latency_ms+'ms':r.error}</span></div>`).join('');
+  } catch(e) { resEl.innerHTML = `❌ ${e.message}`; }
+}
+
+function showBuildFile(filename) {
+  document.querySelectorAll('#buildFileTabs .file-tab').forEach(b => b.classList.toggle('active', b.textContent === filename));
+  const content = currentServerFiles[filename] || '';
+  const codeEl = document.getElementById('buildFileCode');
+  codeEl.textContent = content;
+  codeEl.className = langClass(filename);
+  hljs.highlightElement(codeEl);
+}
+
+function copyBuildCode() { navigator.clipboard.writeText(document.getElementById('buildFileCode').textContent); }
+
+function downloadZip(serverId) { window.open(API + '/builder/download/' + serverId); }
+
+async function addBuiltToRegistry(data) {
+  try {
+    await fetch(API + '/servers/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+      name: data.name, description: data.description, api_base_url: data.api_base_url,
+      api_key_env_name: data.api_key_env_name, tools: data.tools, category: data.category, source: 'built'
+    })});
+    alert('Added to registry!');
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ── Registry ──────────────────────────────────────────────────────────────────
+async function loadRegistry() {
+  try {
+    const [servers, cats] = await Promise.all([fetch(API+'/servers').then(r=>r.json()), fetch(API+'/categories').then(r=>r.json())]);
+    allServers = servers;
+    renderFilterPills(cats);
+    renderStats(servers, cats);
+    renderGrid(servers);
+  } catch(e) { document.getElementById('serverGrid').innerHTML = `<div class="empty-state"><p>Cannot reach MCPHub backend at ${API}</p></div>`; }
+}
+
+function renderFilterPills(cats) {
+  const el = document.getElementById('filterPills');
+  el.innerHTML = `<span class="pill ${activeFilter==='all'?'active':''}" onclick="setFilter('all')">All</span>` +
+    cats.map(c => `<span class="pill ${activeFilter===c.category?'active':''}" onclick="setFilter('${c.category}')">${c.category} <small>(${c.count})</small></span>`).join('');
+}
+
+function renderStats(servers, cats) {
+  const total = servers.length;
+  const tools = servers.reduce((s,srv) => s + (srv.tools||[]).length, 0);
+  document.getElementById('statsBar').innerHTML = `<span><strong>${total}</strong> MCP Servers</span><span><strong>${tools}</strong> Tools Available</span><span><strong>${cats.length}</strong> Categories</span>`;
+}
+
+function renderGrid(servers) {
+  const el = document.getElementById('serverGrid');
+  if (!servers.length) { el.innerHTML = '<div class="empty-state"><p>No servers found.</p></div>'; return; }
+  el.innerHTML = servers.map(s => serverCard(s)).join('');
+}
+
+function serverCard(s) {
+  const tools = (s.tools||[]).slice(0,4);
+  const extra = (s.tools||[]).length - 4;
+  return `
+    <div class="server-card">
+      <div class="card-header">
+        <div class="card-title">🔧 ${escHtml(s.name)}</div>
+      </div>
+      <div class="card-meta">
+        <span class="cat-badge">${escHtml(s.category||'Custom')}</span>
+        <span class="src-badge ${s.source==='built'?'src-built':'src-registered'}">${s.source==='built'?'Built on Hub':'Registered'}</span>
+      </div>
+      <div class="card-desc">${escHtml(s.description)}</div>
+      <div class="card-tools">
+        ${tools.map(t => `<span class="tool-chip">${escHtml(t.name)}</span>`).join('')}
+        ${extra>0?`<span class="tool-chip">+${extra} more</span>`:''}
+      </div>
+      <div class="card-api">${escHtml(s.api_base_url||'')}</div>
+      <div class="card-actions">
+        <button class="card-btn" onclick="openCodeModal(${JSON.stringify(s).replace(/"/g,'&quot;')})">View Code</button>
+        <button class="card-btn" onclick="openTestModal(${JSON.stringify(s).replace(/"/g,'&quot;')})">Test</button>
+        <button class="card-btn" onclick="downloadZip('${s.id}')">Download</button>
+      </div>
+    </div>`;
+}
+
+function setFilter(cat) {
+  activeFilter = cat;
+  const filtered = cat === 'all' ? allServers : allServers.filter(s => s.category === cat);
+  document.querySelectorAll('.pill').forEach(p => p.classList.toggle('active', p.textContent.startsWith(cat==='all'?'All':cat)));
+  renderGrid(filtered);
+}
+
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(doSearch, 350);
+}
+
+async function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) { renderGrid(allServers); return; }
+  try {
+    const r = await fetch(API + '/search?q=' + encodeURIComponent(q));
+    const d = await r.json();
+    renderGrid(d.results || d);
+  } catch(e) {}
+}
+
+// Register panel
+function toggleRegisterPanel() {
+  document.getElementById('registerPanel').classList.toggle('open');
+}
+
+function addRegTool() {
+  const name = document.getElementById('regToolName').value.trim();
+  const desc = document.getElementById('regToolDesc').value.trim();
+  if (!name) return;
+  regTools.push({name, description: desc});
+  document.getElementById('regToolName').value = '';
+  document.getElementById('regToolDesc').value = '';
+  renderRegToolList();
+}
+
+function renderRegToolList() {
+  document.getElementById('regToolList').innerHTML = regTools.map((t,i) =>
+    `<div class="tool-entry"><span style="font-family:monospace">${t.name}</span><span style="color:var(--muted)">— ${t.description}</span><button class="rm" onclick="removeRegTool(${i})">✕</button></div>`
+  ).join('');
+}
+
+function removeRegTool(i) { regTools.splice(i,1); renderRegToolList(); }
+
+async function registerServer() {
+  const name = document.getElementById('regName').value.trim();
+  const desc = document.getElementById('regDesc').value.trim();
+  if (!name || !desc) { alert('Name and description required.'); return; }
+  try {
+    await fetch(API + '/servers/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+      name, description: desc,
+      api_base_url: document.getElementById('regApiUrl').value.trim(),
+      api_key_env_name: document.getElementById('regEnvVar').value.trim(),
+      tools: regTools,
+      category: document.getElementById('regCategory').value,
+      source: 'registered'
+    })});
+    regTools = [];
+    toggleRegisterPanel();
+    loadRegistry();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+let modalFiles = {};
+
+function openCodeModal(server) {
+  const files = server.files || {};
+  const fileNames = Object.keys(files);
+  modalFiles = files;
+
+  if (!fileNames.length) {
+    document.getElementById('modalFileTabs').innerHTML = '';
+    document.getElementById('modalCode').textContent = '// No source files available for this server.\n// This server was registered externally.';
+    document.getElementById('modalCode').className = 'language-text';
+    document.getElementById('modalTitle').textContent = server.name + ' — Code';
+    document.getElementById('codeModal').classList.add('open');
+    hljs.highlightAll();
+    return;
+  }
+
+  document.getElementById('modalTitle').textContent = server.name + ' — Code';
+  document.getElementById('modalFileTabs').innerHTML = fileNames.map((f,i) =>
+    `<button class="file-tab ${i===0?'active':''}" onclick="showModalFile('${f}')">${f}</button>`
+  ).join('');
+  const codeEl = document.getElementById('modalCode');
+  codeEl.textContent = files[fileNames[0]] || '';
+  codeEl.className = langClass(fileNames[0]);
+  document.getElementById('codeModal').classList.add('open');
+  hljs.highlightAll();
+}
+
+function showModalFile(f) {
+  document.querySelectorAll('#modalFileTabs .file-tab').forEach(b => b.classList.toggle('active', b.textContent === f));
+  const codeEl = document.getElementById('modalCode');
+  codeEl.textContent = modalFiles[f] || '';
+  codeEl.className = langClass(f);
+  hljs.highlightElement(codeEl);
+}
+
+function copyModalCode() { navigator.clipboard.writeText(document.getElementById('modalCode').textContent); }
+function closeModal() { document.getElementById('codeModal').classList.remove('open'); }
+
+function openTestModal(server) {
+  document.getElementById('testModalTitle').textContent = server.name + ' — Test Tools';
+  const tools = server.tools || [];
+  document.getElementById('testModalBody').innerHTML = tools.length
+    ? tools.map(t => buildTestCard(t, server.id)).join('') + `
+      <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
+        <div class="form-group" style="flex:1;"><label>API Key for testing all:</label>
+          <div class="key-wrap"><input type="password" id="testAllKeyModal" placeholder="Your API key"><button onclick="document.getElementById('testAllKeyModal').type==='password'?document.getElementById('testAllKeyModal').type='text':document.getElementById('testAllKeyModal').type='password'">👁</button></div>
+        </div>
+        <button class="btn-sec" onclick="testAllModal('${server.id}')">Test All</button>
+      </div>
+      <div id="testAllResultModal" style="display:none;margin-top:12px;"></div>`
+    : '<p style="color:var(--muted)">No tools defined for this server.</p>';
+  document.getElementById('testModal').classList.add('open');
+}
+
+async function testAllModal(serverId) {
+  const apiKey = document.getElementById('testAllKeyModal').value;
+  const resEl = document.getElementById('testAllResultModal');
+  resEl.style.display = 'block'; resEl.innerHTML = 'Running...';
+  try {
+    const r = await fetch(API + '/builder/test-all', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({server_id:serverId, api_key:apiKey, sample_params:{}})});
+    const d = await r.json();
+    resEl.innerHTML = `<strong>${d.passed}/${d.total} passed</strong>` + d.results.map(r => `<div class="test-all-row"><span class="${r.success?'ok-text':'fail-text'}">${r.success?'✅':'❌'}</span><span style="font-family:monospace">${r.tool}</span><span style="color:var(--muted)">${r.success?r.latency_ms+'ms':r.error}</span></div>`).join('');
+  } catch(e) { resEl.innerHTML = '❌ ' + e.message; }
+}
+
+function closeTestModal() { document.getElementById('testModal').classList.remove('open'); }
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function langClass(filename) {
+  if (filename.endsWith('.py')) return 'language-python';
+  if (filename.endsWith('.md')) return 'language-markdown';
+  if (filename.endsWith('.txt')) return 'language-text';
+  if (filename.endsWith('.json')) return 'language-json';
+  if (filename.startsWith('.env')) return 'language-bash';
+  return 'language-text';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(function init() {
+  selectProvider(currentProvider);
+  document.querySelectorAll('.provider-btn').forEach(b => {
+    if (b.textContent.toLowerCase() === currentProvider) b.classList.add('active');
+  });
+  toggleProvider(); // open by default
+})();
+</script>
+</body>
+</html>

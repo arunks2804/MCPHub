@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+httpx
+python-dotenv
+aiofiles
+anthropic
+openai
+groq
+mistralai
+google-generativeai
+mcp

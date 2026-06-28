@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Data & generated output
+data/registry.db
+generated/
+!generated/.gitkeep
+
+# IDE
+.DS_Store
+.vscode/
+.idea/
